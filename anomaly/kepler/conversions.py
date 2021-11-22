@@ -43,10 +43,13 @@ TODO:
         JIT-compilation of the Newton-Raphson loop.
   - [ ] JIT-compile these functions and profile.
 """
+import jax
 import jax.numpy as jnp
-from anomaly.optimizers.newton import MAX_NEWTON_RAPHSON_ITERATIONS, newton_raphson
+from anomaly.optimizers.newton import newton_raphson
 
+# Newton steps here converge in very few iterations to converge
 _MAX_NEWTON_ITERATIONS = 10
+
 
 def mean_to_eccentric_anomaly(
     mean_anomaly: jnp.ndarray,
@@ -70,7 +73,7 @@ def mean_to_eccentric_anomaly(
   )
   implicit_ea = lambda E: _kepler_implicit(
     eccentric_anomaly=E, mean_anomaly=M, eccentricity=e)
-  return newton_raphson(implicit_ea, x0=eccentric_anomaly_start, max_iter=MAX_NEWTON_RAPHSON_ITERATIONS)
+  return newton_raphson(implicit_ea, x0=eccentric_anomaly_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
 def mean_to_true_anomaly(
@@ -94,7 +97,7 @@ def mean_to_true_anomaly(
     eccentricity=e,
   )
   theta_start = _mean_to_true_anomaly_approx(mean_anomaly=M, eccentricity=e)
-  return newton_raphson(implicit_theta, x0=theta_start, max_iter=MAX_NEWTON_RAPHSON_ITERATIONS)
+  return newton_raphson(implicit_theta, x0=theta_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
 def true_to_mean_anomaly(
@@ -114,7 +117,7 @@ def true_to_mean_anomaly(
   E = true_to_eccentric_anomaly(true_anomaly=theta, eccentricity=e)
   implicit_m = lambda M: _kepler_implicit(mean_anomaly=M, eccentric_anomaly=E, eccentricity=e)
   M_start = _true_to_mean_anomaly_approx(true_anomaly=theta, eccentricity=e)
-  return newton_raphson(implicit_m, M_start, max_iter=MAX_NEWTON_RAPHSON_ITERATIONS)
+  return newton_raphson(implicit_m, M_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
 def eccentric_to_true_anomaly(
@@ -152,8 +155,7 @@ def true_to_eccentric_anomaly(
   implicit_e = lambda E: _anomaly_implicit(
     eccentric_anomaly=E, true_anomaly=theta, eccentricity=e)
   E_start = theta  # valid for small e
-  return newton_raphson(implicit_e, x0=E_start, max_iter=MAX_NEWTON_RAPHSON_ITERATIONS)
-
+  return newton_raphson(implicit_e, x0=E_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 def eccentric_to_mean_anomaly(
     eccentric_anomaly: jnp.ndarray,

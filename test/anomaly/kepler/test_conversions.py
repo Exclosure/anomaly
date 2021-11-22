@@ -37,7 +37,7 @@ round_trip_test_data = list(product(
 
 @pytest.mark.parametrize("func_pair,anomaly,eccentricity", round_trip_test_data)
 def test_round_trips(func_pair, anomaly, eccentricity):
-  """Test round-trip anomalies."""
+  """Test round-trip anomaly conversions."""
   forward, backward = func_pair
   intermediate = forward(anomaly, eccentricity=eccentricity)
   result = backward(intermediate, eccentricity=eccentricity)
