@@ -37,20 +37,35 @@ Relations:
     M(t) = n (t - tau)
 
 TODO:
-
-  - [ ] Improve performance using a small, fixed number (3?)
-        of Newton-Raphson iterations. This will allow for
-        JIT-compilation of the Newton-Raphson loop.
-  - [ ] JIT-compile these functions and profile.
+  - [ ] Make custom vjps and jvps using the implicit
+        function theorem.
 """
+from functools import wraps
+import math
+from typing import Callable, Any
+
 import jax
+from jax._src.numpy.lax_numpy import result_type
 import jax.numpy as jnp
-from anomaly.optimizers.newton import newton_raphson
+from anomaly.optimizers.newton import MAX_NEWTON_RAPHSON_ITERATIONS, newton_raphson
 
 # Newton steps here converge in very few iterations to converge
-_MAX_NEWTON_ITERATIONS = 10
+_MAX_NEWTON_ITERATIONS = 8
 
 
+def _clip_to_rads(f: Callable[..., jnp.ndarray]):
+  """Clips the output of a function to [0, 2*pi].
+
+  Used when the final call is a Newton-Raphson iteration
+  that may result in out-of-bounds radians.
+  """
+  @wraps(f)
+  def wrapper(*args, **kwargs):
+    return jnp.remainder(f(*args, **kwargs), 2*math.pi)
+  return wrapper
+
+
+@_clip_to_rads
 def mean_to_eccentric_anomaly(
     mean_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -75,7 +90,7 @@ def mean_to_eccentric_anomaly(
     eccentric_anomaly=E, mean_anomaly=M, eccentricity=e)
   return newton_raphson(implicit_ea, x0=eccentric_anomaly_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
-
+@_clip_to_rads
 def mean_to_true_anomaly(
     mean_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -100,6 +115,7 @@ def mean_to_true_anomaly(
   return newton_raphson(implicit_theta, x0=theta_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
+@_clip_to_rads
 def true_to_mean_anomaly(
     true_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -134,10 +150,12 @@ def eccentric_to_true_anomaly(
     The true anomaly.
   """
   E, e = eccentric_anomaly, eccentricity
+  # Use M as intermediate because E -> M is an exact formula.
   M = eccentric_to_mean_anomaly(eccentric_anomaly=E, eccentricity=e)
   return mean_to_true_anomaly(mean_anomaly=M, eccentricity=e)
 
 
+@_clip_to_rads
 def true_to_eccentric_anomaly(
     true_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -152,10 +170,14 @@ def true_to_eccentric_anomaly(
     The eccentric anomaly.
   """
   theta, e = true_anomaly, eccentricity
-  implicit_e = lambda E: _anomaly_implicit(
+  implicit_E = lambda E: _anomaly_implicit(
     eccentric_anomaly=E, true_anomaly=theta, eccentricity=e)
-  E_start = theta  # valid for small e
-  return newton_raphson(implicit_e, x0=E_start, max_iter=_MAX_NEWTON_ITERATIONS)
+  E_start = _true_to_eccentric_anomaly_approx(
+    true_anomaly=theta,
+    eccentricity=e,
+  )
+  return newton_raphson(implicit_E, x0=E_start, max_iter=_MAX_NEWTON_ITERATIONS)
+
 
 def eccentric_to_mean_anomaly(
     eccentric_anomaly: jnp.ndarray,
@@ -202,11 +224,21 @@ def _anomaly_implicit(
 
   NOTE: Units of anomalies are radians.
   """
-  # (1 - e) tan^2(theta/2) = (1 + e) tan^2(E / 2)
   E, theta, e =  eccentric_anomaly, true_anomaly, eccentricity
-  return (1 - e)*jnp.tan(theta/2)**2 - (1 + e)*jnp.tan(E/2)**2
+  # The implicit equation is usually written as
+  #
+  # (1 - e) tan^2(theta/2) = (1 + e) tan^2(E / 2)
+  #
+  # To avoid singularities, we use the equivalent formulation
+  #
+  # sqrt(1-e) sin(theta/2) cos(E/2) = sqrt(1+e) cos(theta/2) sin(E/2)
+  return (
+    jnp.sqrt(1 - e)*jnp.sin(theta/2)*jnp.cos(E/2)
+    - jnp.sqrt(1 + e)*jnp.cos(theta/2)*jnp.sin(E/2)
+  )
 
 
+@_clip_to_rads
 def _true_to_mean_anomaly_approx(
     true_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -235,6 +267,7 @@ def _true_to_mean_anomaly_approx(
   )
 
 
+@_clip_to_rads
 def _mean_to_true_anomaly_approx(
     mean_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -262,6 +295,7 @@ def _mean_to_true_anomaly_approx(
   )
 
 
+@_clip_to_rads
 def _mean_to_eccentric_anomaly_approx(
     mean_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
@@ -275,8 +309,16 @@ def _mean_to_eccentric_anomaly_approx(
     Returns:
       The approximate eccentric anomaly.
   """
-  # Just use the true anomaly; valid for small e.
-  return _mean_to_true_anomaly_approx(
-      mean_anomaly=mean_anomaly,
-      eccentricity=eccentricity,
-  )
+  M, e = mean_anomaly, eccentricity
+  # From 1st order Taylor series approximation around E = M
+  return (e * (jnp.sin(M) + jnp.cos(M)*M) + M) / (1 + e * jnp.cos(M) )
+
+@_clip_to_rads
+def _true_to_eccentric_anomaly_approx(
+  true_anomaly: jnp.ndarray,
+  eccentricity: jnp.ndarray,
+) -> jnp.ndarray:
+  # Use 1st order Taylor approximation
+  # E ~ theta - e /(1+e) sin(theta)
+  theta, e = true_anomaly, eccentricity
+  return theta - e/(1 + e)*jnp.sin(theta)

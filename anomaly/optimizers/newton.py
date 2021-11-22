@@ -1,3 +1,9 @@
+"""Newton and related methods for optimization.
+
+TODO:
+  - [ ] Create a fixed-iteration Newton-Raphson using JAX
+        control-flow.
+"""
 import logging
 from typing import Callable, Optional
 

@@ -59,7 +59,7 @@ EXTRAS = {
     'cpu': ['jax[cpu]'],
     'gpu': ['jax[gpu]'],
     'tpu': ['jax[tpu]'],
-    'dev': ["pytest"],
+    'dev': ["pytest", "pytest-profiling"],
 }
 
 
