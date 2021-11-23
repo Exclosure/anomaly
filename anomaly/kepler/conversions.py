@@ -42,15 +42,16 @@ TODO:
 """
 from functools import wraps
 import math
-from typing import Callable, Any
+from typing import Callable
 
 import jax
-from jax._src.numpy.lax_numpy import result_type
 import jax.numpy as jnp
-from anomaly.optimizers.newton import MAX_NEWTON_RAPHSON_ITERATIONS, newton_raphson
+from jax.lax import stop_gradient
+from anomaly.optimizers.newton import newton_raphson
+
 
 # Newton steps here converge in very few iterations to converge
-_MAX_NEWTON_ITERATIONS = 8
+_MAX_NEWTON_ITERATIONS = 12
 
 
 def _clip_to_rads(f: Callable[..., jnp.ndarray]):
@@ -82,13 +83,14 @@ def mean_to_eccentric_anomaly(
     The eccentric anomaly.
   """
   M, e = mean_anomaly, eccentricity
-  eccentric_anomaly_start = _mean_to_eccentric_anomaly_approx(
+  eccentric_anomaly_start = stop_gradient(_mean_to_eccentric_anomaly_approx(
       mean_anomaly=M,
       eccentricity=e,
-  )
+  ))
   implicit_ea = lambda E: _kepler_implicit(
     eccentric_anomaly=E, mean_anomaly=M, eccentricity=e)
-  return newton_raphson(implicit_ea, x0=eccentric_anomaly_start, max_iter=_MAX_NEWTON_ITERATIONS)
+  return newton_raphson(implicit_ea, eccentric_anomaly_start, max_iter=_MAX_NEWTON_ITERATIONS)
+
 
 @_clip_to_rads
 def mean_to_true_anomaly(
@@ -112,7 +114,7 @@ def mean_to_true_anomaly(
     eccentricity=e,
   )
   theta_start = _mean_to_true_anomaly_approx(mean_anomaly=M, eccentricity=e)
-  return newton_raphson(implicit_theta, x0=theta_start, max_iter=_MAX_NEWTON_ITERATIONS)
+  return newton_raphson(implicit_theta, theta_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
 @_clip_to_rads
@@ -132,7 +134,7 @@ def true_to_mean_anomaly(
   theta, e = true_anomaly, eccentricity
   E = true_to_eccentric_anomaly(true_anomaly=theta, eccentricity=e)
   implicit_m = lambda M: _kepler_implicit(mean_anomaly=M, eccentric_anomaly=E, eccentricity=e)
-  M_start = _true_to_mean_anomaly_approx(true_anomaly=theta, eccentricity=e)
+  M_start = stop_gradient(_true_to_mean_anomaly_approx(true_anomaly=theta, eccentricity=e))
   return newton_raphson(implicit_m, M_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
@@ -172,11 +174,11 @@ def true_to_eccentric_anomaly(
   theta, e = true_anomaly, eccentricity
   implicit_E = lambda E: _anomaly_implicit(
     eccentric_anomaly=E, true_anomaly=theta, eccentricity=e)
-  E_start = _true_to_eccentric_anomaly_approx(
+  E_start = stop_gradient(_true_to_eccentric_anomaly_approx(
     true_anomaly=theta,
     eccentricity=e,
-  )
-  return newton_raphson(implicit_E, x0=E_start, max_iter=_MAX_NEWTON_ITERATIONS)
+  ))
+  return newton_raphson(implicit_E, E_start, max_iter=_MAX_NEWTON_ITERATIONS)
 
 
 def eccentric_to_mean_anomaly(
@@ -313,12 +315,13 @@ def _mean_to_eccentric_anomaly_approx(
   # From 1st order Taylor series approximation around E = M
   return (e * (jnp.sin(M) + jnp.cos(M)*M) + M) / (1 + e * jnp.cos(M) )
 
+
 @_clip_to_rads
 def _true_to_eccentric_anomaly_approx(
   true_anomaly: jnp.ndarray,
   eccentricity: jnp.ndarray,
 ) -> jnp.ndarray:
   # Use 1st order Taylor approximation
-  # E ~ theta - e /(1+e) sin(theta)
+  # E ~ theta - 2 e /(1+e) sin(theta/2) cos(theta/2)
   theta, e = true_anomaly, eccentricity
-  return theta - e/(1 + e)*jnp.sin(theta)
+  return theta - 2*e/(1 + e)*jnp.sin(theta/2) * jnp.cos(theta/2)
