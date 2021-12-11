@@ -52,7 +52,7 @@ def newton_raphson(
   """
   tangent_solve = lambda g, t: linear_solve(jax.jacobian(g)(t), t)
   solve = lambda f, x0: newton_raphson_solve(f, x0, eps, max_iter)
-  return custom_root(f, x0, solve, tangent_solve)
+  return custom_root(f, stop_gradient(x0), solve, tangent_solve)
 
 
 def newton_raphson_solve(
@@ -164,3 +164,29 @@ def linear_solve(A: jnp.ndarray, b: jnp.ndarray):
 
 def _gap(fx: jnp.ndarray) -> float:
   return jnp.abs(fx).max()
+
+
+def newton_1d(f, x0, eps=None, max_iter=100):
+  """Simpler implementation of Newton-Raphson for 1d problems."""
+  if (eps is None) and (x0.dtype == jnp.float64):
+    _eps = NEWTON_RAPHSON_EPS_64
+  elif (eps is None):
+    _eps = NEWTON_RAPHSON_EPS
+  else:
+    _eps = eps
+
+  def cond(state): 
+    it, _, fx, dfx = state
+    return (jnp.abs(fx) > _eps) & (it < max_iter) & (jnp.abs(dfx) > _eps)
+
+  def body(state):
+    it, x0, fx0, dfx0 = state
+    x = x0 - fx0 / dfx0
+    fx, dfx = jax.value_and_grad(f)(x)
+    return (it + 1, x, fx, dfx)
+  
+  fx0, dfx0 = jax.value_and_grad(f)(x0)
+  initial_state = (0, x0, fx0, dfx0)
+  final_state = lax.while_loop(cond, body, initial_state)
+  return final_state[1]
+
