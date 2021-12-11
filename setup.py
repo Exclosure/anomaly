@@ -54,12 +54,22 @@ REQUIRED = [
   "chex",
 ]
 
+DEV_REQUIRES = [
+  "pytest",
+  "pytest-profiling",
+]
+
+EXTRAS = [
+  "jupyterlab",
+]
+
 # Optional packages
 EXTRAS = {
     'cpu': ['jax[cpu]'],
     'gpu': ['jax[gpu]'],
     'tpu': ['jax[tpu]'],
-    'dev': ["pytest", "pytest-profiling"],
+    'dev': DEV_REQUIRES,
+    'extras': EXTRAS,
 }
 
 
