@@ -7,10 +7,8 @@ import jax.core
 import numpy as np
 from scipy.linalg.special_matrices import toeplitz
 
-from anomaly.optimizers._custom_root_patch import custom_root
-from anomaly.optimizers.newton import newton_raphson, linear_solve
+from anomaly.optimizers.newton import newton_raphson, newton_1d, linear_solve
 from jax import config
-config.update('jax_disable_jit', True)
 
 
 def one_dim_test(x: jnp.ndarray) -> jnp.ndarray:
@@ -37,11 +35,11 @@ transform = jnp.array(
 transform_inv = jnp.linalg.inv(transform)
 complex_method = lambda x: transform @ one_dim_test(transform_inv @ x)
 
-def test_newton_raphson_1d():
+def test_newton_1d():
   # Note: The optimization to has trouble
   # with the flatness near the root at 1,
   # resulting in lower-quality solutions.
-  optimizer = lambda x0: newton_raphson(one_dim_test, x0)
+  optimizer = lambda x0: newton_1d(one_dim_test, x0)
   for x0,y0 in test_points:
     result = optimizer(x0)
     np.testing.assert_almost_equal(result, y0, decimal=5)
@@ -80,7 +78,8 @@ def sqrt_cubed_newton(x):
 
 def test_newton_derivatives_scalar():
   x = 5.0
-  v, g = jax.value_and_grad(sqrt_cubed_newton)(x)
+  v = sqrt_cubed_newton(x)
+  g = jax.jacfwd(sqrt_cubed_newton)(x)
   np.testing.assert_allclose(v, x ** 1.5)
   np.testing.assert_allclose(g, 1.5 * x ** 0.5)
 
@@ -88,7 +87,7 @@ def test_newton_derivatives_scalar():
 def test_newton_derivatives_scalar_array():
   x = jnp.array([5.0])
   v = sqrt_cubed_newton(x)
-  g = jax.jacobian(sqrt_cubed_newton)(x)
+  g = jax.jacfwd(sqrt_cubed_newton)(x)
   np.testing.assert_allclose(v, x ** 1.5)
   np.testing.assert_allclose(g, 1.5 * x[:, jnp.newaxis] ** 0.5)
 
@@ -96,7 +95,7 @@ def test_newton_derivatives_scalar_array():
 def test_newton_derivatives_vector():
   x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0])
   v = sqrt_cubed_newton(x)
-  g = jax.jacobian(sqrt_cubed_newton)(x)
+  g = jax.jacfwd(sqrt_cubed_newton)(x)
   np.testing.assert_allclose(v, x ** 1.5)
   np.testing.assert_allclose(g, 1.5 * jnp.diag(x) ** 0.5)
 
@@ -104,7 +103,7 @@ def test_newton_derivatives_vector():
 def test_newton_derivatives_vmap():
   x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0])
   v = jax.vmap(sqrt_cubed_newton)(x)
-  g = jax.vmap(jax.grad(sqrt_cubed_newton))(x)
+  g = jax.vmap(jax.jacfwd(sqrt_cubed_newton))(x)
   np.testing.assert_allclose(v, x ** 1.5)
   np.testing.assert_allclose(g, 1.5 * x ** 0.5)
 
