@@ -48,15 +48,20 @@ URL = 'https://github.com/mbmccoy/anomaly'
 AUTHOR = 'Mike McCoy'
 EMAIL = None
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '0.1.0'  # Note: Can also use a __version__.py file; see below.
+VERSION = None # Use the __version__.py file; see below.
 
 REQUIRED = [
   "chex",
 ]
 
 DEV_REQUIRES = [
+  # Testing
   "pytest",
   "pytest-profiling",
+
+  # Testing
+  "sphinx",
+  "myst-parser[linkify]",
 ]
 
 EXTRAS = [
