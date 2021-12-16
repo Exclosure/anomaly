@@ -10,8 +10,8 @@ all: docs  ## Build all
 
 .PHONY: black
 black:  ## Format code using black
-	python -m black --version
-	python -m black .
+	@python -m black --version
+	@python -m black .
 
 
 .PHONY: ci
@@ -24,12 +24,12 @@ clean: clean-docs  ## Clean all
 
 .PHONY: clean-docs
 clean-docs:  ## Clean docs build
-	$(MAKE) -C docs/ clean
+	@$(MAKE) -C docs/ clean
 
 
 .PHONY: docs
 docs:  ## Make documents in HTML format.
-	$(MAKE) -C docs/ html
+	@$(MAKE) -C docs/ html
 
 
 .PHONY: help
@@ -39,11 +39,11 @@ help:  ## Self-documenting help command.
 
 .PHONY: lint
 lint:  ## Lint code using pylint
-	python -m pylint --version
-	python -m pylint anomaly/
+	@python -m pylint --version
+	@python -m pylint anomaly/
 
 
 .PHONY: test
 test:  ## Run tests
-	python -m pytest --version
-	python -m pytest tests
+	@python -m pytest --version
+	@python -m pytest tests

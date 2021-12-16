@@ -1,7 +1,8 @@
-import math
 from functools import wraps
-import jax.numpy as jnp
+import math
 from typing import Callable
+
+import jax.numpy as jnp
 
 
 def clip_to_rads(f: Callable[..., jnp.ndarray]):
