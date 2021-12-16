@@ -1,5 +1,7 @@
+"""Differentiable orbital dynamics with JAX."""
+
 from .__version__ import __version__
 
-all = [
+__all__ = [
     "__version__",
 ]
