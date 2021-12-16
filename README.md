@@ -11,7 +11,7 @@ In one line:
 pip install anomaly[cpu]
 ```
 
-This will install the CPU-version of JAX which is readily supported on the most machines. To take advantage of GPU or TPU optimizations, you can replace `cpu` above with `gpu` or `tpu`. These options correspond precisely to the JAX options. 
+This will install the CPU-version of JAX which is readily supported on the most machines. To take advantage of GPU or TPU optimizations, you can replace `cpu` above with `gpu` or `tpu`. These options correspond precisely to the JAX options.
 
 
 ## Development
@@ -24,12 +24,18 @@ pip install -e ".[cpu,dev]"
 
 This will give you the CPU-only version of the package. Of course, if you have a CUDA-enabled GPU or TPU, you can replace `cpu` with either `gpu` or `tpu`.
 
+Install the pre-commit hooks with
+
+```bash
+pre-commit install
+```
+
 
 ## Troubleshooting
 
 ### Apple M1
 
-If you see the error 
+If you see the error
 ```
 E   RuntimeError: This version of jaxlib was built using AVX instructions, which your CPU and/or operating system do not support. You may be able work around this issue by building jaxlib from source.
 ```
