@@ -24,66 +24,66 @@ class KeplerianOrbitalElement:
 
     References:
 
-      [1] https://www.amsat.org/keplerian-elements-tutorial/
+        [1] https://www.amsat.org/keplerian-elements-tutorial/
 
     """
 
     epoch: datetime
     """The epoch relative to this measurement (aka T0).
 
-  Units:
-    The epoch is represented as python datetime object.
-  """
+    Units:
+        The epoch is represented as python datetime object.
+    """
 
     inclination_deg: float
     """Orbital inclination (I0).
 
-  Units:
-    Degrees, in the range [0, 180).
-  """
+    Units:
+      Degrees, in the range [0, 180).
+    """
 
     ascension_deg: float
     """Right ascension of ascending node (aka RAAN, O0, longitude).
 
-  Units:
-    Degrees, in the range [0, 360).
-  """
+    Units:
+        Degrees, in the range [0, 360).
+    """
 
     perigree_deg: float
     """Argument of perigree (aka ARGP, W0).
 
-  Units:
-     Degrees, in the range [0, 360).
-  """
+    Units:
+        Degrees, in the range [0, 360).
+    """
 
     eccentricity: float
     """Eccentricity (aka ecce, E0, e).
 
-  The eccentricity of the orbital ellipse.
+    The eccentricity of the orbital ellipse.
 
-  Units:
-    Unitless, in the range [0, 1). (Zero is a circle.)
-  """
+    Units:
+        Unitless, in the range [0, 1). (Zero is a circle.)
+    """
 
     mean_motion_rev_per_day: float
     """Mean motion (aka N0).
 
-  This is the reciprocal of "orbital period".
+    This is the reciprocal of "orbital period".
 
-  Units:
-    Revolutions per day. Positive number.
-  """
+    Units:
+        Revolutions per day. Positive number.
+    """
 
     # TODO: derive true anomaly, eccentric anomaly(?)
     mean_anomaly_deg: float
     """Mean anomaly (aka M0, MA, phase).
 
-  An angle that represents the location on the orbit.
-  Perigree occurs at MA = 0, while apogee occurs at MA = 180.
+    An angle that represents the location on the orbit.
+    Perigree occurs at MA = 0, while apogee occurs at MA = 180.
 
-  Units:
-    Degrees between [0, 360).
-  """
+    Units:
+        Degrees between [0, 360).
+    """
 
     def to_numpy(self):
         """Return this as a numpy vector.
@@ -122,28 +122,28 @@ class OrbitalStateVector:
     epoch: datetime
     """The epoch relative to this measurement (aka T0).
 
-  Units:
-    The epoch is represented as python datetime object.
-  """
+    Units:
+        The epoch is represented as python datetime object.
+    """
 
     position: jnp.ndarray
     """Position vector.
 
-  This is a 3-vector of cartesian coordinates, with origin
-  at the center of mass of the earth.
+    This is a 3-vector of cartesian coordinates, with origin
+    at the center of mass of the earth.
 
-  Units:
-    Meters.
-  """
+    Units:
+        Meters.
+    """
 
     velocity: jnp.ndarray
     """Velocity vector.
 
-  This is a 3-vector of cartesian velocity coordinates.
+    This is a 3-vector of cartesian velocity coordinates.
 
-  Units:
-    Meters / second.
-  """
+    Units:
+        Meters / second.
+    """
 
     def to_numpy(self) -> jnp.ndarray:
         """Return the [epoch, position, velocity] vector."""
