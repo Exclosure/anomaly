@@ -30,10 +30,9 @@ Install the pre-commit hooks with
 pre-commit install
 ```
 
-
 ### Linting
 
-In order to run black,
+In order to run `black`, use `make black`.
 
 ## Troubleshooting
 
