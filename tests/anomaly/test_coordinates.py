@@ -1,6 +1,5 @@
 """Tests for coordinate transformations."""
 from itertools import product
-from jax.core import Value
 
 import jax
 from jax import numpy as jnp
@@ -70,8 +69,7 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
     def maybe_jit(fun):
         if do_jit:
             return jax.jit(fun)
-        else:
-            return fun
+        return fun
 
     if jac_mode == "fwd":
         jac_fun = maybe_jit(jax.jacfwd(orbital_state_vector_to_orbital_element))
@@ -144,3 +142,28 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         coe_jac,
         expected,
     )
+
+
+@pytest.mark.parametrize("do_jit", [False, True])
+def test_equatorial_orbital_state_vector_to_orbital_element(do_jit):
+    """Test equatorial orbital state vectors to orbital elements."""
+    position = jnp.array([0.999999999, 0, 0])
+    velocity = jnp.array([0, 1.000000001, 0])
+    epoch_sec = J2000_DATETIME.timestamp()
+    state = OrbitalStateVector(
+        epoch_sec=epoch_sec, position=position, velocity=velocity
+    )  # type: ignore
+
+    if do_jit:
+        coe = jax.jit(orbital_state_vector_to_orbital_element)(state)
+    else:
+        coe = orbital_state_vector_to_orbital_element(state)
+    assert coe.semimajor_axis_km == approx(0.5, rel=1e-5)
+    assert coe.eccentricity == approx(1.0, rel=1e-5)
+    assert coe.inclination_deg == approx(0.0, rel=1e-5)
+    assert coe.ascension_deg == approx(0.0, rel=1e-5)
+    assert coe.perigree_deg == approx(180.0, rel=1e-5)
+    assert coe.true_anomaly_deg == approx(180.0, rel=1e-5)
+    assert coe.true_longitude_of_periapsis_deg == approx(180.0, rel=1e-5)
+    assert coe.argument_of_latitude_deg == approx(0.0, rel=1e-5)
+    assert coe.true_longitude_deg == approx(0.0, rel=1e-5)

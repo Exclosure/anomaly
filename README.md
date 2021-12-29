@@ -31,6 +31,10 @@ pre-commit install
 ```
 
 
+### Linting
+
+In order to run black,
+
 ## Troubleshooting
 
 ### Apple M1

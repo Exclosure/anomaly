@@ -1,6 +1,5 @@
 """Utilities and constants."""
 from functools import wraps
-import math
 from typing import Callable, Tuple
 
 import jax
@@ -24,16 +23,16 @@ TWOPI = 6.283185307179586
 MU_METERS_CUBED_PER_SECOND_SQUARED = 3.986004415e5  #  Units: km^3/s^2
 
 
-def clip_to_rads(f: Callable[..., jnp.ndarray]) -> Callable[..., jnp.ndarray]:
+def clip_to_rads(fun: Callable[..., jnp.ndarray]) -> Callable[..., jnp.ndarray]:
     """Clips the output of a function to [0, 2*pi].
 
     Used when the final call is a Newton-Raphson iteration
     that may result in out-of-bounds radians.
     """
 
-    @wraps(f)
+    @wraps(fun)
     def wrapper(*args, **kwargs):
-        return jnp.remainder(f(*args, **kwargs), TWOPI)
+        return jnp.remainder(fun(*args, **kwargs), TWOPI)
 
     return wrapper
 
@@ -77,9 +76,9 @@ def norm_and_norm_squared(x: jnp.ndarray) -> Tuple[float, float]:
     Returns:
         A pair ``(x_norm, x_norm ** 2)``.
     """
-    r2 = jnp.sum(x ** 2)
-    r = jnp.sqrt(r2)
-    return (r, r2)
+    r_squared = jnp.sum(x ** 2)
+    r = jnp.sqrt(r_squared)
+    return (r, r_squared)
 
 
 def rad2deg(rad: float) -> jnp.ndarray:

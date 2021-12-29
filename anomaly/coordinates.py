@@ -1,10 +1,8 @@
+# pylint: disable=R0914
 """Module for coordinates and transformation functions."""
 from datetime import datetime
-from typing import Iterable, Tuple
-import sys
 
 from chex import dataclass
-import numpy as np
 import jax
 from jax import numpy as jnp
 
@@ -199,6 +197,7 @@ def orbital_state_vector_to_orbital_element(
     state_vector: OrbitalStateVector,
 ) -> ClassicalOrbitalElement:
     """Convert orbital state vector to classical orbital element."""
+    # pylint: disable-C0103
     mu = MU_METERS_CUBED_PER_SECOND_SQUARED
     r, _ = norm_and_norm_squared(state_vector.position)
 
@@ -206,11 +205,11 @@ def orbital_state_vector_to_orbital_element(
     mu_rinv = mu / r
 
     # Velocity
-    v, v2 = norm_and_norm_squared(state_vector.velocity)
+    _, v_squared = norm_and_norm_squared(state_vector.velocity)
 
     # Specific momentum vector
     h_vec = jnp.cross(state_vector.position, state_vector.velocity)
-    h, h2 = norm_and_norm_squared(h_vec)
+    h, h_squared = norm_and_norm_squared(h_vec)
     h_norm = h_vec / h
 
     # Node vector
@@ -219,11 +218,11 @@ def orbital_state_vector_to_orbital_element(
     n_vec_norm = node_vec / n
 
     # Specific mechanical energy
-    xi = v2 / 2 - mu_rinv
+    xi = v_squared / 2 - mu_rinv
 
     # Eccentricity vector (always points to perigree)
     eccentricity_vec = (
-        (v2 - mu_rinv) * state_vector.position
+        (v_squared - mu_rinv) * state_vector.position
         - jnp.dot(state_vector.position, state_vector.velocity) * state_vector.velocity
     ) / mu
 
@@ -231,16 +230,13 @@ def orbital_state_vector_to_orbital_element(
     eccentricity, _ = norm_and_norm_squared(eccentricity_vec)
     eccentricity_vec_norm = eccentricity_vec / eccentricity
 
-    apogee_vec = jnp.cross(h_vec, eccentricity_vec)
-    apogee, _ = norm_and_norm_squared(apogee_vec)
-
     semimajor_axis_km = -mu / (2 * xi)  # semimajor axis (km)
-    semiparameter_km = h2 / mu  # semiparameter (p)
+    semiparameter_km = h_squared / mu  # semiparameter (p)
 
     # Angle between orbital plane and K
     inclination_rad = jnp.arccos(h_norm[2])
 
-    # Angle between the node and I in the (I, J) plane
+    # Angle between the node and I
     ascention_rad = signed_arccos(
         n_vec_norm[0],
         n_vec_norm[1],
@@ -252,7 +248,7 @@ def orbital_state_vector_to_orbital_element(
         eccentricity_vec[2],
     )
 
-    # Angle between the perigree and the position in the orbital plane.
+    # Angle between the perigree and the position in the orbital plane
     true_anomaly_rad = signed_arccos(
         jnp.dot(eccentricity_vec_norm, state_vector.position) / r,
         jnp.dot(state_vector.position, state_vector.velocity),
