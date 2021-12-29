@@ -48,7 +48,7 @@ from anomaly.optimizers.newton import newton_1d
 from anomaly.utils import clip_to_rads
 
 
-# Newton steps here converge in very few iterations to converge
+# Newton steps here converge in very few iterations
 _MAX_NEWTON_ITERATIONS = 12
 
 
@@ -195,7 +195,7 @@ def _kepler_implicit(
     eccentric_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
 ) -> jnp.ndarray:
-    """The Kepler equation in implicit form.
+    """Compute the Kepler equation in implicit form.
 
     The value of the Kepler equation is zero if and only if
     the three parameters correspond to a valid triple.
@@ -211,7 +211,7 @@ def _mean_to_eccentric_anomaly_approx(
     mean_anomaly: jnp.ndarray,
     eccentricity: jnp.ndarray,
 ) -> jnp.ndarray:
-    """Approximate value for true anomaly.
+    """Approximate the value fort the true anomaly.
 
     Parameters:
       mean_anomaly: The mean anomaly (radians).
