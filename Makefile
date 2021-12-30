@@ -14,6 +14,16 @@ black:  ## Format code using black
 	@python -m black .
 
 
+.PHONY: ci-lint
+ci-lint:  ## Run CI linting
+	@pre-commit --version
+	@pre-commit run --all-files --verbose
+
+
+.PHONY: ci
+ci: ci-lint test  ## Run all tests in CI
+
+
 .PHONY: clean
 clean: clean-docs  ## Clean all
 
@@ -43,13 +53,3 @@ lint:  ## Lint code using pylint
 test:  ## Run tests
 	@python -m pytest --version
 	@python -m pytest tests
-
-
-.PHONY: ci-lint
-ci-lint:  ## Run CI linting
-	@pre-commit --version
-	@pre-commit run --all-files --verbose
-
-
-.PHONY: ci
-ci: ci-lint test  ## Run all tests in CI
