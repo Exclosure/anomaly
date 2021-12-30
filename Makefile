@@ -1,7 +1,8 @@
-# Leave at the top to make the default command.
+PYTHON_VERSION ?= $(shell python -c 'import sys; v=sys.version_info; print(f"{v.major}.{v.minor}")')
+
+# Leave as the first command to make it the default command.
 .PHONY: default
 defualt: help
-
 
 # Other commands are in alphabetical order
 .PHONY: all
@@ -52,4 +53,11 @@ lint:  ## Lint code using pylint
 .PHONY: test
 test:  ## Run tests
 	@python -m pytest --version
-	@python -m pytest --cov=anomaly --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html tests
+	@python -m pytest \
+		--cov=anomaly \
+		--doctest-modules \
+		--junitxml=reports/junit/test-results-${PYTHON_VERSION}.xml \
+		--cov-report=xml:reports/coverage-${PYTHON_VERSION}.xml \
+		--cov-report=html:reports/coverage-html-${PYTHON_VERSION} \
+		--cov-fail-under=95 \
+		tests

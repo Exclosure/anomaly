@@ -29,7 +29,7 @@ jobs:
       id: pip-cache
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
-    - name: pip cache
+    - name: Cache dependencies
       uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
