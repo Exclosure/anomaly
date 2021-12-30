@@ -1,13 +1,12 @@
 """Newton and related methods for optimization."""
-from typing import Callable, Tuple, NamedTuple
+from typing import Callable, NamedTuple, Tuple
 
 import jax
-from jax.lax import stop_gradient
-from jax import lax
 import jax.numpy as jnp
+from jax import lax
+from jax.lax import stop_gradient
 
 from anomaly.optimizers._custom_root_patch import custom_root
-
 
 MAX_NEWTON_RAPHSON_ITERATIONS = 100
 NEWTON_RAPHSON_EPS = 1e-9

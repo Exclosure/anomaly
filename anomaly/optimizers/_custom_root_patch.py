@@ -1,24 +1,24 @@
 # pylint: disable=invalid-name
 """Patch the custom-root functionality of JAX."""
-from functools import partial
 import itertools
 import operator
+from functools import partial
 
 import jax
 from jax import core
 from jax import linear_util as lu
-from jax.interpreters import ad
-from jax.tree_util import tree_flatten, tree_unflatten, treedef_children, treedef_tuple
-from jax._src.traceback_util import api_boundary
 from jax._src.lax.control_flow import (
     _abstractify,
-    _map,
-    _initial_style_jaxpr,
     _check_tree,
-    _RootTuple,
     _flatten,
+    _initial_style_jaxpr,
+    _map,
+    _RootTuple,
     _split_root_args,
 )
+from jax._src.traceback_util import api_boundary
+from jax.interpreters import ad
+from jax.tree_util import tree_flatten, tree_unflatten, treedef_children, treedef_tuple
 
 
 # This is the patch

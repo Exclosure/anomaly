@@ -1,12 +1,12 @@
 """Test Newton optimizers."""
 # pylint: disable=invalid-name,missing-function-docstring
 import jax
-from jax import numpy as jnp
 import jax.core
 import numpy as np
+from jax import numpy as jnp
 from scipy.linalg.special_matrices import toeplitz  # pylint: disable=no-name-in-module
 
-from anomaly.optimizers.newton import newton_raphson, newton_1d, linear_solve
+from anomaly.optimizers.newton import linear_solve, newton_1d, newton_raphson
 
 
 def one_dim_test(x: jnp.ndarray) -> jnp.ndarray:

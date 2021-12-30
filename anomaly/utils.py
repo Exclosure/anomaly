@@ -5,7 +5,6 @@ from typing import Callable, Tuple
 import jax
 import jax.numpy as jnp
 
-
 TWOPI = 6.283185307179586
 
 # Earth's gravitational constant.

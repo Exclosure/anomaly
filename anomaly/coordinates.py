@@ -11,9 +11,9 @@ from anomaly.utils import (
     deg2rad,
     norm_and_norm_squared,
     rad2deg,
-    signed_arccos,
     rot1,
     rot3,
+    signed_arccos,
 )
 
 J2000_DATETIME = datetime(2000, 1, 1, 12)

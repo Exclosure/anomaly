@@ -48,7 +48,6 @@ from jax.lax import stop_gradient
 from anomaly.optimizers.newton import newton_1d
 from anomaly.utils import clip_to_rads
 
-
 # Newton steps here converge in very few iterations
 _MAX_NEWTON_ITERATIONS = 12
 

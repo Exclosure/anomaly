@@ -1,7 +1,7 @@
 """Configuration for pytest."""
 import logging
-import jax
 
+import jax
 
 logging.basicConfig(level=logging.DEBUG)
 

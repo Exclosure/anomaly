@@ -1,6 +1,6 @@
 """Test conversion functions."""
-from itertools import product
 import math
+from itertools import product
 
 import jax
 import jax.numpy as jnp
@@ -15,7 +15,6 @@ from anomaly.kepler.conversions import (
     true_to_eccentric_anomaly,
     true_to_mean_anomaly,
 )
-
 
 REQUIRED_DECIMALS = 12
 

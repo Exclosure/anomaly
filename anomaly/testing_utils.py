@@ -1,10 +1,8 @@
 """Utilities used in testing."""
 from typing import TypeVar
 
-from numpy.testing import assert_allclose
-
 import jax
-
+from numpy.testing import assert_allclose
 
 PyTreeT = TypeVar("PyTreeT")
 
