@@ -1,11 +1,16 @@
 """Utilities used in testing."""
+from typing import TypeVar
+
 from numpy.testing import assert_allclose
+
 import jax
-from jax import numpy as jnp
+
+
+PyTreeT = TypeVar("PyTreeT")
 
 
 def assert_trees_allclose(
-    x: jnp.ndarray, y: jnp.ndarray, rtol: float = 1e-7, atol: float = 0.0
+    x: PyTreeT, y: PyTreeT, rtol: float = 1e-7, atol: float = 0.0
 ):
     """Check that two trees have almost equal elements.
 

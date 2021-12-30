@@ -117,7 +117,9 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         ),  # type: ignore
         true_anomaly_deg=OrbitalStateVector(
             epoch_sec=jnp.array(0.0),
-            position=jnp.array([0.00010446, 0.00075782, -0.01157202]),
+            position=jnp.array(
+                [0.00010446313823647312, 0.0007578172888617357, -0.011572024203925656]
+            ),
             velocity=jnp.array([-8.53708417, -10.50120821, 18.98492708]),
         ),  # type: ignore
         true_longitude_of_periapsis_deg=OrbitalStateVector(
@@ -137,11 +139,7 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         ),  # type: ignore
     )  # type: ignore
 
-    assert_trees_allclose(
-        coe_jac,
-        expected,
-        rtol=1e-4,
-    )
+    assert_trees_allclose(coe_jac, expected, rtol=1e-5)
 
 
 @pytest.mark.parametrize("do_jit", [False, True])
@@ -184,7 +182,7 @@ def test_orbital_element_to_orbital_state_vector(do_jit):
         eccentricity=0.83285,
         inclination_deg=87.87,
         ascension_deg=227.89,
-        perigree_deg=53.58,
+        perigree_deg=53.38,
         true_anomaly_deg=92.335,
         true_longitude_of_periapsis_deg=000,
         argument_of_latitude_deg=000,
@@ -199,10 +197,10 @@ def test_orbital_element_to_orbital_state_vector(do_jit):
         state,
         OrbitalStateVector(
             epoch_sec=epoch_sec,
-            position=jnp.array([6525.344, 6861.535, 6449.125]),
-            velocity=jnp.array([4.90276, 5.533124, -1.975709]),
+            position=jnp.array([6525.368, 6861.532, 6449.119]),
+            velocity=jnp.array([4.902279, 5.533140, -1.975710]),
         ),  # type: ignore
-        rtol=1e-1,
+        rtol=1e-6,
     )
 
 
@@ -213,7 +211,7 @@ def test_pqw_to_ijk(do_jit, jac_mode):
     """Test conversion from PQW to IJK."""
     inclination_rad = deg2rad(87.87)
     ascension_rad = deg2rad(227.89)
-    perigree_rad = deg2rad(53.58)
+    perigree_rad = deg2rad(53.38)
     x_pqw = jnp.array(
         [
             -466.7679,
@@ -241,8 +239,8 @@ def test_pqw_to_ijk(do_jit, jac_mode):
         rotation_matrix = maybe_jit(jax.jacrev(pqw_to_ijk, argnums=(0,)))(*args)
     np.testing.assert_allclose(
         x_ijk,
-        jnp.array([6525.344, 6861.535, 6449.125]),
-        rtol=1e-2,
+        jnp.array([6525.368, 6861.532, 6449.119]),
+        rtol=1e-6,
     )
 
     np.testing.assert_allclose(
@@ -256,5 +254,5 @@ def test_pqw_to_ijk(do_jit, jac_mode):
                 ]
             ]
         ),
-        rtol=1e-2,
+        rtol=1e-6,
     )
