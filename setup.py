@@ -61,6 +61,7 @@ DEV_REQUIRES = [
     # Testing
     "pytest",
     "pytest-profiling",
+    "pytest-cov",
     # Testing
     "sphinx",
     "myst-parser[linkify]",

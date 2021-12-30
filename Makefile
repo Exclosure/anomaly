@@ -52,4 +52,4 @@ lint:  ## Lint code using pylint
 .PHONY: test
 test:  ## Run tests
 	@python -m pytest --version
-	@python -m pytest tests
+	@python -m pytest --cov=anomaly --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html tests
