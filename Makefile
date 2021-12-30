@@ -46,7 +46,7 @@ help:  ## Self-documenting help command.
 .PHONY: lint
 lint:  ## Lint code using pylint
 	@python -m pylint --version
-	@python -m pylint anomaly/
+	@python -m pylint --verbose anomaly/
 
 
 .PHONY: test
