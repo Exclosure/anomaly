@@ -1,17 +1,21 @@
 """Tests for coordinate transformations."""
 from itertools import product
 
+import numpy as np
 import jax
 from jax import numpy as jnp
 import pytest
 from pytest import approx
 
+from anomaly.utils import deg2rad
 from anomaly.testing_utils import assert_trees_almost_equal
 from anomaly.coordinates import (
     J2000_DATETIME,
     ClassicalOrbitalElement,
     OrbitalStateVector,
+    orbital_element_to_orbital_state_vector,
     orbital_state_vector_to_orbital_element,
+    pqw_to_ijk,
 )
 
 
@@ -91,11 +95,6 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
             position=jnp.array([0.50985685, 0.42761464, 2.46176658]),
             velocity=jnp.array([1354.75795856, 1674.21379212, -3152.69193108]),
         ),  # type: ignore
-        semimajor_axis_km=OrbitalStateVector(
-            epoch_sec=jnp.array(0.0),
-            position=jnp.array([11.32680329, 11.91362648, 11.19393694]),
-            velocity=jnp.array([32097.98851187, 36239.66254761, -12942.7338175]),
-        ),  # type: ignore
         eccentricity=OrbitalStateVector(
             epoch_sec=jnp.array(0.0),
             position=jnp.array([4.91905754e-05, 5.35446667e-05, 1.60783275e-05]),
@@ -167,3 +166,93 @@ def test_equatorial_orbital_state_vector_to_orbital_element(do_jit):
     assert coe.true_longitude_of_periapsis_deg == approx(180.0, rel=1e-5)
     assert coe.argument_of_latitude_deg == approx(0.0, rel=1e-5)
     assert coe.true_longitude_deg == approx(0.0, rel=1e-5)
+
+
+@pytest.mark.parametrize("do_jit", [False, True])
+def test_orbital_element_to_orbital_state_vector(do_jit):
+    """Test orbital element to state vector.
+
+    The test here is taken from Vallado, p. 115-116. Note that Vallado
+    rounds to 7 figures, so it's likely that our 64-bit computations
+    are more accurate.
+    """
+    epoch_sec = J2000_DATETIME.timestamp()
+    coe = ClassicalOrbitalElement(
+        epoch_sec=epoch_sec,
+        semiparameter_km=11067.790,
+        eccentricity=0.83285,
+        inclination_deg=87.87,
+        ascension_deg=227.89,
+        perigree_deg=53.58,
+        true_anomaly_deg=92.335,
+        true_longitude_of_periapsis_deg=000,
+        argument_of_latitude_deg=000,
+        true_longitude_deg=000,
+    )  # type: ignore
+    if do_jit:
+        state = jax.jit(orbital_element_to_orbital_state_vector)(coe)
+    else:
+        state = orbital_element_to_orbital_state_vector(coe)
+
+    assert_trees_almost_equal(
+        state,
+        OrbitalStateVector(
+            epoch_sec=epoch_sec,
+            position=jnp.array([6525.344, 6861.535, 6449.125]),
+            velocity=jnp.array([4.90276, 5.533124, -1.975709]),
+        ),  # type: ignore
+    )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_pqw_to_ijk(do_jit, jac_mode):
+    """Test conversion from PQW to IJK."""
+    inclination_rad = deg2rad(87.87)
+    ascension_rad = deg2rad(227.89)
+    perigree_rad = deg2rad(53.58)
+    x_pqw = jnp.array(
+        [
+            -466.7679,
+            11447.0219,
+            0.0,
+        ]
+    )
+
+    def maybe_jit(func):
+        if do_jit:
+            return jax.jit(func)
+        return func
+
+    args = (
+        x_pqw,
+        inclination_rad,
+        perigree_rad,
+        ascension_rad,
+    )
+
+    x_ijk = maybe_jit(pqw_to_ijk)(*args)
+    if jac_mode == "fwd":
+        rotation_matrix = maybe_jit(jax.jacfwd(pqw_to_ijk, argnums=(0,)))(*args)
+    else:
+        rotation_matrix = maybe_jit(jax.jacrev(pqw_to_ijk, argnums=(0,)))(*args)
+    np.testing.assert_allclose(
+        x_ijk,
+        jnp.array([6525.344, 6861.535, 6449.125]),
+        rtol=1e-2,
+    )
+
+    np.testing.assert_allclose(
+        rotation_matrix,
+        jnp.array(
+            [
+                [
+                    [-0.37786007, 0.55464179, -0.74134625],
+                    [-0.46252560, 0.58055638, 0.67009280],
+                    [0.802052, 0.59609293, 0.03716695],
+                ]
+            ]
+        ),
+        rtol=1e-2,
+    )
