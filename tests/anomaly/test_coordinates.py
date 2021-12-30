@@ -256,3 +256,90 @@ def test_pqw_to_ijk(do_jit, jac_mode):
         ),
         rtol=1e-6,
     )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_orbital_state_vector_to_orbital_element_round_trip_jacobian(do_jit, jac_mode):
+    """Test round-trip orbital state vectors to orbital state vectors."""
+    position = jnp.array([6524.834, 6862.875, 6448.296])
+    velocity = jnp.array([4.901327, 5.533756, -1.976341])
+    epoch_sec = J2000_DATETIME.timestamp()
+    state = OrbitalStateVector(
+        epoch_sec=epoch_sec, position=position, velocity=velocity
+    )  # type: ignore
+
+    def maybe_jit(fun):
+        if do_jit:
+            return jax.jit(fun)
+        return fun
+
+    def round_trip(state_):
+        coe = orbital_state_vector_to_orbital_element(state_)
+        return orbital_element_to_orbital_state_vector(coe)
+
+    if jac_mode == "fwd":
+        jac_fun = maybe_jit(jax.jacfwd(round_trip))
+    else:
+        jac_fun = maybe_jit(jax.jacrev(round_trip))
+
+    assert_trees_allclose(round_trip(state), state)
+
+    round_trip_jac = jac_fun(state)
+    assert_trees_allclose(
+        round_trip_jac,
+        OrbitalStateVector(
+            epoch_sec=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    1.0,
+                ),
+                position=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                velocity=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+            ),  # type: ignore
+            position=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                position=jnp.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                ),
+                velocity=jnp.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                ),
+            ),  # type: ignore
+            velocity=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                position=jnp.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                ),
+                velocity=jnp.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                ),
+            ),  # type: ignore
+        ),
+        rtol=0,
+        atol=1e-11,
+    )
