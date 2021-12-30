@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """Conversions for Keplerian orbit parameters.
 
 For conversions between anomalies, we use Newton-Raphson
@@ -63,8 +64,6 @@ def mean_to_eccentric_anomaly(
     Parameters:
       mean_anomaly: The mean anomaly (radians).
       eccentricity: Eccentricity (between zero and one).
-      **kwargs: Additional kewyord arguments passed to
-        the Newton-Raphson optimizer.
 
     Returns:
       The eccentric anomaly.

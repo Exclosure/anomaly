@@ -1,10 +1,4 @@
-"""Newton and related methods for optimization.
-
-TODO:
-  - [ ] Use jax.lax.custom_root to make our Newton method
-        differentiable.
-
-"""
+"""Newton and related methods for optimization."""
 from typing import Callable, Tuple, NamedTuple
 
 import jax
@@ -32,7 +26,7 @@ class _NewtonState(NamedTuple):
 
 
 def newton_raphson(
-    f: Callable,
+    func: Callable,
     x0: jnp.ndarray,
     eps: float = NEWTON_RAPHSON_EPS_64,
     max_iter: int = MAX_NEWTON_RAPHSON_ITERATIONS,
@@ -40,7 +34,7 @@ def newton_raphson(
     """Newton-Raphson method for root-finding.
 
     Args:
-      f: The function to find zeros. For consistent updates,
+      func: The function to find zeros. For consistent updates,
          we require ``f(x0).shape == x0.shape``.
       x0: The starting point for Newton-Raphson iteration.
       eps: The stopping value. By default, we choose eps=1e-16
@@ -52,7 +46,7 @@ def newton_raphson(
     """
     tangent_solve = lambda g, t: linear_solve(jax.jacobian(g)(t), t)
     solve = lambda f, x0: newton_raphson_solve(f, x0, eps, max_iter)
-    return custom_root(f, stop_gradient(x0), solve, tangent_solve)
+    return custom_root(func, stop_gradient(x0), solve, tangent_solve)
 
 
 def newton_raphson_solve(
@@ -61,6 +55,8 @@ def newton_raphson_solve(
     eps: float = None,
     max_iter: int = MAX_NEWTON_RAPHSON_ITERATIONS,
 ):
+    """Solve for zeros using Newton-Raphson iterations."""
+    # pylint: disable=invalid-name
     if (eps is None) and (x0.dtype == jnp.float64):
         _eps = NEWTON_RAPHSON_EPS_64
     elif eps is None:
@@ -84,7 +80,7 @@ def newton_raphson_solve(
     )
 
     def loop_continue(state: _NewtonState) -> bool:
-        """Returns False when the loop should stop."""
+        """Return False when the loop should stop."""
         return stop_gradient(
             lax.cond(
                 (state.iteration < max_iter)
@@ -115,6 +111,7 @@ def _newton_raphson_step(
     f_jac: Callable[[jnp.ndarray], jnp.ndarray],
     state: _NewtonState,
 ) -> _NewtonState:
+    # pylint: disable=invalid-name
     x0, fx0, dfx0, _, _, _, _, step_size = state
     x, step_size = _take_step(x0, fx0, dfx0)
     fx = f(x)
@@ -123,7 +120,8 @@ def _newton_raphson_step(
 
 
 def _update_state(x, fx, dfx, step_size, prev_state) -> _NewtonState:
-    x0, fx0, dfx0, best_x, best_dfx, best_gap, it, step_size = prev_state
+    # pylint: disable=invalid-name
+    x0, fx0, dfx0, best_x, best_dfx, best_gap, iteration, step_size = prev_state
     gap = _gap(fx)
     (best_x, best_gap, best_dfx) = lax.cond(
         gap < best_gap,
@@ -138,7 +136,7 @@ def _update_state(x, fx, dfx, step_size, prev_state) -> _NewtonState:
         best_x=best_x,
         best_dfx=best_dfx,
         best_gap=best_gap,
-        iteration=lax.add(it + 1, 1),
+        iteration=lax.add(iteration + 1, 1),
         step_size=step_size,
     )
 
@@ -151,7 +149,9 @@ def _take_step(x0, fx0, dfx0) -> Tuple[jnp.ndarray, float]:
     return x, step_size
 
 
-def linear_solve(A: jnp.ndarray, b: jnp.ndarray):
+def linear_solve(A: jnp.ndarray, b: jnp.ndarray):  # pylint: disable=invalid-name
+    """Solve a linear equation."""
+    # pylint: disable=fixme
     # TODO: Are there better ways to do a switch on the
     # dimension?
     return lax.cond(
@@ -168,11 +168,13 @@ def linear_solve(A: jnp.ndarray, b: jnp.ndarray):
 
 
 def _gap(fx: jnp.ndarray) -> float:
+    # pylint: disable=invalid-name
     return jnp.abs(fx).max()
 
 
 def newton_1d(f, x0, eps=None, max_iter=100):
     """Simpler implementation of Newton-Raphson for 1d problems."""
+    # pylint: disable=invalid-name
     if (eps is None) and (x0.dtype == jnp.float64):
         _eps = NEWTON_RAPHSON_EPS_64
     elif eps is None:
