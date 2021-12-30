@@ -17,6 +17,7 @@ from anomaly.utils import (
 )
 
 J2000_DATETIME = datetime(2000, 1, 1, 12)
+PRECISION = jax.lax.Precision.HIGHEST
 _TOLERANCE = 1e-6
 
 
@@ -227,7 +228,8 @@ def orbital_state_vector_to_orbital_element(
     # Eccentricity vector (always points to perigree)
     eccentricity_vec = (
         (v_squared - mu_rinv) * state_vector.position
-        - jnp.dot(state_vector.position, state_vector.velocity) * state_vector.velocity
+        - jnp.dot(state_vector.position, state_vector.velocity, precision=PRECISION)
+        * state_vector.velocity
     ) / mu
 
     # Eccentricity
@@ -246,14 +248,14 @@ def orbital_state_vector_to_orbital_element(
 
     # Angle of the perigree vector in the orbital plane
     perigree_rad = signed_arccos(
-        jnp.dot(n_vec_norm, eccentricity_vec_norm),
+        jnp.dot(n_vec_norm, eccentricity_vec_norm, precision=PRECISION),
         eccentricity_vec[2],
     )
 
     # Angle between the perigree and the position in the orbital plane
     true_anomaly_rad = signed_arccos(
-        jnp.dot(eccentricity_vec_norm, state_vector.position) / r,
-        jnp.dot(state_vector.position, state_vector.velocity),
+        jnp.dot(eccentricity_vec_norm, state_vector.position, precision=PRECISION) / r,
+        jnp.dot(state_vector.position, state_vector.velocity, precision=PRECISION),
     )
 
     # Angle betwen the perigree and I in the (I, J) plane
@@ -264,7 +266,7 @@ def orbital_state_vector_to_orbital_element(
 
     # Angle between the node and the position in the orbital plane
     argument_of_latitude_rad = signed_arccos(
-        jnp.dot(n_vec_norm, state_vector.position) / r,
+        jnp.dot(n_vec_norm, state_vector.position, precision=PRECISION) / r,
         state_vector.position[2],
     )
 

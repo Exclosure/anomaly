@@ -1,14 +1,24 @@
 """Utilities used in testing."""
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_allclose
 import jax
+from jax import numpy as jnp
 
 
-def assert_trees_almost_equal(x, y, **kwargs):
+def assert_trees_allclose(
+    x: jnp.ndarray, y: jnp.ndarray, rtol: float = 1e-7, atol: float = 0.0
+):
     """Check that two trees have almost equal elements.
 
     Arguments:
-        x: The first tree.
-        y: The second tree.
+        x:
+            The first tree.
+        y:
+            The second tree.
+        rtol:
+            Relative tolerance.
+        atol:
+            Absolute tolerance. If zero, no absolute tolerance
+            is checked.
 
     Raises:
         AssertionError:
@@ -23,7 +33,7 @@ def assert_trees_almost_equal(x, y, **kwargs):
 
     def check(a, b):
         try:
-            assert_array_almost_equal(a, b, **kwargs)
+            assert_allclose(a, b, rtol=rtol, atol=atol)
         except AssertionError as e:
             return str(e)
         return good
