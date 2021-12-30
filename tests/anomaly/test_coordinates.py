@@ -12,11 +12,19 @@ from anomaly.testing_utils import assert_trees_allclose
 from anomaly.coordinates import (
     J2000_DATETIME,
     ClassicalOrbitalElement,
+    ijk_to_pqw,
     OrbitalStateVector,
     orbital_element_to_orbital_state_vector,
     orbital_state_vector_to_orbital_element,
     pqw_to_ijk,
 )
+
+
+def _jit(func, do_jit):
+    """JIT the function if do_jit is True."""
+    if do_jit:
+        return jax.jit(func)
+    return func
 
 
 @pytest.mark.parametrize("do_jit", [False, True])
@@ -34,10 +42,8 @@ def test_orbital_state_vector_to_orbital_element(do_jit):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    if do_jit:
-        coe = jax.jit(orbital_state_vector_to_orbital_element)(state)
-    else:
-        coe = orbital_state_vector_to_orbital_element(state)
+    func = _jit(orbital_state_vector_to_orbital_element, do_jit)
+    coe = func(state)
 
     assert coe.semiparameter_km == approx(11067.790)
     assert coe.semimajor_axis_km == approx(36127.343)
@@ -70,15 +76,10 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    def maybe_jit(fun):
-        if do_jit:
-            return jax.jit(fun)
-        return fun
-
     if jac_mode == "fwd":
-        jac_fun = maybe_jit(jax.jacfwd(orbital_state_vector_to_orbital_element))
+        jac_fun = _jit(jax.jacfwd(orbital_state_vector_to_orbital_element), do_jit)
     else:
-        jac_fun = maybe_jit(jax.jacrev(orbital_state_vector_to_orbital_element))
+        jac_fun = _jit(jax.jacrev(orbital_state_vector_to_orbital_element), do_jit)
 
     coe_jac = jac_fun(state)
 
@@ -152,10 +153,8 @@ def test_equatorial_orbital_state_vector_to_orbital_element(do_jit):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    if do_jit:
-        coe = jax.jit(orbital_state_vector_to_orbital_element)(state)
-    else:
-        coe = orbital_state_vector_to_orbital_element(state)
+    coe = _jit(orbital_state_vector_to_orbital_element, do_jit)(state)
+
     assert coe.semimajor_axis_km == approx(0.5, rel=1e-5)
     assert coe.eccentricity == approx(1.0, rel=1e-5)
     assert coe.inclination_deg == approx(0.0, rel=1e-5)
@@ -188,10 +187,8 @@ def test_orbital_element_to_orbital_state_vector(do_jit):
         argument_of_latitude_deg=000,
         true_longitude_deg=000,
     )  # type: ignore
-    if do_jit:
-        state = jax.jit(orbital_element_to_orbital_state_vector)(coe)
-    else:
-        state = orbital_element_to_orbital_state_vector(coe)
+
+    state = _jit(orbital_element_to_orbital_state_vector, do_jit)(coe)
 
     assert_trees_allclose(
         state,
@@ -220,11 +217,6 @@ def test_pqw_to_ijk(do_jit, jac_mode):
         ]
     )
 
-    def maybe_jit(func):
-        if do_jit:
-            return jax.jit(func)
-        return func
-
     args = (
         x_pqw,
         inclination_rad,
@@ -232,11 +224,11 @@ def test_pqw_to_ijk(do_jit, jac_mode):
         ascension_rad,
     )
 
-    x_ijk = maybe_jit(pqw_to_ijk)(*args)
+    x_ijk = _jit(pqw_to_ijk, do_jit)(*args)
     if jac_mode == "fwd":
-        rotation_matrix = maybe_jit(jax.jacfwd(pqw_to_ijk, argnums=(0,)))(*args)
+        rotation_matrix = _jit(jax.jacfwd(pqw_to_ijk, argnums=(0,)), do_jit)(*args)
     else:
-        rotation_matrix = maybe_jit(jax.jacrev(pqw_to_ijk, argnums=(0,)))(*args)
+        rotation_matrix = _jit(jax.jacrev(pqw_to_ijk, argnums=(0,)), do_jit)(*args)
     np.testing.assert_allclose(
         x_ijk,
         jnp.array([6525.368, 6861.532, 6449.119]),
@@ -255,6 +247,51 @@ def test_pqw_to_ijk(do_jit, jac_mode):
             ]
         ),
         rtol=1e-6,
+    )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_ijk_to_pqw(do_jit, jac_mode):
+    """Test conversion from IJK to PQW."""
+    x_ijk = jnp.array([6525.36961515, 6861.53366465, 6449.11542819])
+    inclination_rad = deg2rad(87.87)
+    ascension_rad = deg2rad(227.89)
+    perigree_rad = deg2rad(53.38)
+
+    args = (
+        x_ijk,
+        inclination_rad,
+        perigree_rad,
+        ascension_rad,
+    )
+
+    x_pqw = _jit(ijk_to_pqw, do_jit)(*args)
+    if jac_mode == "fwd":
+        rotation_matrix = _jit(jax.jacfwd(ijk_to_pqw, argnums=(0,)), do_jit)(*args)
+    else:
+        rotation_matrix = _jit(jax.jacrev(ijk_to_pqw, argnums=(0,)), do_jit)(*args)
+
+    np.testing.assert_allclose(
+        x_pqw,
+        jnp.array([-466.7679, 11447.0219, 0.0]),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+    np.testing.assert_allclose(
+        rotation_matrix,
+        jnp.array(
+            [
+                [
+                    [-0.37786007, -0.46252560, 0.80205476],
+                    [0.55464179, 0.58055638, 0.59609293],
+                    [-0.74134625, 0.67009280, 0.03716695],
+                ]
+            ]
+        ),
+        rtol=1e-7,
     )
 
 
