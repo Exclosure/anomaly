@@ -47,7 +47,8 @@ test:  ## Run tests
 
 .PHONY: ci-lint
 ci-lint:  ## Run CI linting
-	@pre-commit run --all-files
+	@pre-commit --version
+	@pre-commit run --all-files --verbose
 
 
 .PHONY: ci
