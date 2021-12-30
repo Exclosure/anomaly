@@ -1,19 +1,23 @@
-# pylint: disable=R0914
+# pylint: disable=R0914,non-ascii-name
 """Module for coordinates and transformation functions."""
 from datetime import datetime
 
-from chex import dataclass
 import jax
+from chex import dataclass
 from jax import numpy as jnp
 
 from anomaly.utils import (
+    MU_METERS_CUBED_PER_SECOND_SQUARED,
+    deg2rad,
     norm_and_norm_squared,
     rad2deg,
     signed_arccos,
-    MU_METERS_CUBED_PER_SECOND_SQUARED,
+    rot1,
+    rot3,
 )
 
 J2000_DATETIME = datetime(2000, 1, 1, 12)
+PRECISION = jax.lax.Precision.HIGHEST
 _TOLERANCE = 1e-6
 
 
@@ -59,15 +63,19 @@ class ClassicalOrbitalElement:
         Kilometers (km).
     """
 
-    semimajor_axis_km: float
-    """Length of the semimajor axis in kilometers (a).
+    @property
+    def semimajor_axis_km(self) -> float:
+        """Length of the semimajor axis in kilometers (a).
 
-    Also known as:
-        ``a``
+        Also known as:
+            ``a``
 
-    Units:
-        Kilometers (km)
-    """
+        Units:
+            Kilometers (km)
+        """
+        e_squared = self.eccentricity ** 2  # == 1 - b^2 / a^2
+        p = self.semiparameter_km  # == b^2 / a
+        return p / (1 - e_squared)
 
     eccentricity: float
     """Eccentricity of the orbital ellipse (e).
@@ -217,20 +225,16 @@ def orbital_state_vector_to_orbital_element(
     n, _ = norm_and_norm_squared(node_vec)
     n_vec_norm = node_vec / n
 
-    # Specific mechanical energy
-    xi = v_squared / 2 - mu_rinv
-
     # Eccentricity vector (always points to perigree)
     eccentricity_vec = (
         (v_squared - mu_rinv) * state_vector.position
-        - jnp.dot(state_vector.position, state_vector.velocity) * state_vector.velocity
+        - jnp.dot(state_vector.position, state_vector.velocity, precision=PRECISION)
+        * state_vector.velocity
     ) / mu
 
     # Eccentricity
     eccentricity, _ = norm_and_norm_squared(eccentricity_vec)
     eccentricity_vec_norm = eccentricity_vec / eccentricity
-
-    semimajor_axis_km = -mu / (2 * xi)  # semimajor axis (km)
     semiparameter_km = h_squared / mu  # semiparameter (p)
 
     # Angle between orbital plane and K
@@ -244,14 +248,14 @@ def orbital_state_vector_to_orbital_element(
 
     # Angle of the perigree vector in the orbital plane
     perigree_rad = signed_arccos(
-        jnp.dot(n_vec_norm, eccentricity_vec_norm),
+        jnp.dot(n_vec_norm, eccentricity_vec_norm, precision=PRECISION),
         eccentricity_vec[2],
     )
 
     # Angle between the perigree and the position in the orbital plane
     true_anomaly_rad = signed_arccos(
-        jnp.dot(eccentricity_vec_norm, state_vector.position) / r,
-        jnp.dot(state_vector.position, state_vector.velocity),
+        jnp.dot(eccentricity_vec_norm, state_vector.position, precision=PRECISION) / r,
+        jnp.dot(state_vector.position, state_vector.velocity, precision=PRECISION),
     )
 
     # Angle betwen the perigree and I in the (I, J) plane
@@ -262,7 +266,7 @@ def orbital_state_vector_to_orbital_element(
 
     # Angle between the node and the position in the orbital plane
     argument_of_latitude_rad = signed_arccos(
-        jnp.dot(n_vec_norm, state_vector.position) / r,
+        jnp.dot(n_vec_norm, state_vector.position, precision=PRECISION) / r,
         state_vector.position[2],
     )
 
@@ -276,7 +280,6 @@ def orbital_state_vector_to_orbital_element(
     return ClassicalOrbitalElement(
         epoch_sec=state_vector.epoch_sec,
         semiparameter_km=semiparameter_km,
-        semimajor_axis_km=semimajor_axis_km,
         eccentricity=eccentricity,
         inclination_deg=rad2deg(inclination_rad),
         ascension_deg=rad2deg(ascention_rad),
@@ -296,3 +299,74 @@ def _get_node_vec(h_vec, r_vec):
         lambda _: node_vec,
         None,
     )
+
+
+def orbital_element_to_orbital_state_vector(
+    coe: ClassicalOrbitalElement,
+) -> OrbitalStateVector:
+    """Convert a classical orbital element to an orbital state vector."""
+    p, nu, e = coe.semiparameter_km, deg2rad(coe.true_anomaly_deg), coe.eccentricity
+    r_pqw = _get_rpqw(p, nu, e)
+    v_pqw = _get_vpqw(p, nu, e)
+
+    r = pqw_to_ijk(
+        r_pqw,
+        inclination_rad=deg2rad(coe.inclination_deg),
+        perigree_rad=deg2rad(coe.perigree_deg),
+        ascension_rad=deg2rad(coe.ascension_deg),
+    )
+    v = pqw_to_ijk(
+        v_pqw,
+        inclination_rad=deg2rad(coe.inclination_deg),
+        perigree_rad=deg2rad(coe.perigree_deg),
+        ascension_rad=deg2rad(coe.ascension_deg),
+    )
+    return OrbitalStateVector(
+        epoch_sec=coe.epoch_sec,
+        position=r,
+        velocity=v,
+    )  # type: ignore
+
+
+def _get_rpqw(p: float, nu: float, e: float) -> jnp.ndarray:
+    return (
+        jnp.array(
+            [
+                p * jnp.cos(nu),
+                p * jnp.sin(nu),
+                0.0,
+            ]
+        )
+        / (1 + e * jnp.cos(nu))
+    )
+
+
+def _get_vpqw(p: float, nu: float, e: float) -> jnp.ndarray:
+    mu = MU_METERS_CUBED_PER_SECOND_SQUARED
+    return jnp.array(
+        [
+            -jnp.sqrt(mu / p) * jnp.sin(nu),
+            jnp.sqrt(mu / p) * (e + jnp.cos(nu)),
+            0.0,
+        ]
+    )
+
+
+def pqw_to_ijk(
+    x_pqw: jnp.ndarray,
+    inclination_rad: float,
+    perigree_rad: float,
+    ascension_rad: float,
+) -> jnp.ndarray:
+    """Rotate from the PQW frame to the IJC (ECI) frame."""
+    return rot3(-ascension_rad)(rot1(-inclination_rad)(rot3(-perigree_rad)(x_pqw)))
+
+
+def ijk_to_pqw(
+    x_ijk: jnp.ndarray,
+    inclindation_rad: float,
+    perigree_rad: float,
+    ascention_rad: float,
+) -> jnp.ndarray:
+    """Rotate from IJK (ECI) frame to PQW frame."""
+    return rot3(perigree_rad)(rot1(inclindation_rad)(rot3(ascention_rad)(x_ijk)))

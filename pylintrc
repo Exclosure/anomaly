@@ -1,4 +1,8 @@
 [MASTER]
+# Run when pylint starts. This line ensures that VSCode will
+# add the base directory to the system path on startup, which
+# resolves some spurious import-errors.
+init-hook="from pylint.config import find_pylintrc; import os, sys; sys.path.append(os.path.dirname(find_pylintrc()))"
 
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
@@ -200,19 +204,24 @@ function-naming-style=snake_case
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=i,
+good-names=a,
+           b,
+           h,
+           i,
            j,
            k,
-           h,
            n,
+           p,
            v,
            x,
            y,
            z,
            r,
            e,
-           a,
-           b,
+           μ,
+           Ω,
+           ω,
+           ν,
            mu,
            nu,
            xi,

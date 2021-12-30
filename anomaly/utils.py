@@ -81,10 +81,62 @@ def norm_and_norm_squared(x: jnp.ndarray) -> Tuple[float, float]:
     return (r, r_squared)
 
 
-def rad2deg(rad: float) -> jnp.ndarray:
+def rad2deg(rad: float) -> float:
     """Convert radians to degrees.
 
     Unlike `jnp.rad2deg`, the result is normalized between
     zero and 360.
     """
     return jnp.mod(jnp.rad2deg(rad), 360)
+
+
+def deg2rad(deg: float) -> float:
+    """Convert degrees to radians.
+
+    Unlike `jnp.deg2rad`, the result is normalized between
+    zero and 2π.
+    """
+    return jnp.mod(jnp.deg2rad(deg), TWOPI)
+
+
+def givens_rotation(x: jnp.ndarray, angle: float, i: int, j: int):
+    """Compute a Givens rotation.
+
+    Arguments:
+        x:
+            The vector to rotate.
+        angle:
+            The angle (in radians) to rotate.
+        i:
+            The dimension to rotate "from".
+        j:
+            The dimension to rotate "to".
+
+    Returns:
+        The vector with elements rotated.
+    """
+    x_i = x.at[i].get(mode="clip")
+    x_j = x.at[j].get(mode="clip")
+    rotation = jnp.array(
+        [
+            x_i * jnp.cos(angle) + x_j * jnp.sin(angle),
+            x_i * jnp.sin(-angle) + x_j * jnp.cos(angle),
+        ]
+    )
+    idx = jnp.array([i, j])
+    return x.at[idx].set(rotation, mode="clip")
+
+
+def rot1(angle):
+    """Return a function that rotates about the I-axis."""
+    return lambda x: givens_rotation(x, angle, 1, 2)
+
+
+def rot2(angle):
+    """Return a function that rotates about the J-axis."""
+    return lambda x: givens_rotation(x, angle, 2, 0)
+
+
+def rot3(angle):
+    """Return a function that rotates about the K-axis."""
+    return lambda x: givens_rotation(x, angle, 0, 1)

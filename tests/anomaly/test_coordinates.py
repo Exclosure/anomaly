@@ -1,18 +1,30 @@
 """Tests for coordinate transformations."""
 from itertools import product
 
+import numpy as np
 import jax
 from jax import numpy as jnp
 import pytest
 from pytest import approx
 
-from anomaly.testing_utils import assert_trees_almost_equal
+from anomaly.utils import deg2rad
+from anomaly.testing_utils import assert_trees_allclose
 from anomaly.coordinates import (
     J2000_DATETIME,
     ClassicalOrbitalElement,
+    ijk_to_pqw,
     OrbitalStateVector,
+    orbital_element_to_orbital_state_vector,
     orbital_state_vector_to_orbital_element,
+    pqw_to_ijk,
 )
+
+
+def _jit(func, do_jit):
+    """JIT the function if do_jit is True."""
+    if do_jit:
+        return jax.jit(func)
+    return func
 
 
 @pytest.mark.parametrize("do_jit", [False, True])
@@ -30,10 +42,8 @@ def test_orbital_state_vector_to_orbital_element(do_jit):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    if do_jit:
-        coe = jax.jit(orbital_state_vector_to_orbital_element)(state)
-    else:
-        coe = orbital_state_vector_to_orbital_element(state)
+    func = _jit(orbital_state_vector_to_orbital_element, do_jit)
+    coe = func(state)
 
     assert coe.semiparameter_km == approx(11067.790)
     assert coe.semimajor_axis_km == approx(36127.343)
@@ -66,15 +76,10 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    def maybe_jit(fun):
-        if do_jit:
-            return jax.jit(fun)
-        return fun
-
     if jac_mode == "fwd":
-        jac_fun = maybe_jit(jax.jacfwd(orbital_state_vector_to_orbital_element))
+        jac_fun = _jit(jax.jacfwd(orbital_state_vector_to_orbital_element), do_jit)
     else:
-        jac_fun = maybe_jit(jax.jacrev(orbital_state_vector_to_orbital_element))
+        jac_fun = _jit(jax.jacrev(orbital_state_vector_to_orbital_element), do_jit)
 
     coe_jac = jac_fun(state)
 
@@ -90,11 +95,6 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
             epoch_sec=jnp.array(0.0),
             position=jnp.array([0.50985685, 0.42761464, 2.46176658]),
             velocity=jnp.array([1354.75795856, 1674.21379212, -3152.69193108]),
-        ),  # type: ignore
-        semimajor_axis_km=OrbitalStateVector(
-            epoch_sec=jnp.array(0.0),
-            position=jnp.array([11.32680329, 11.91362648, 11.19393694]),
-            velocity=jnp.array([32097.98851187, 36239.66254761, -12942.7338175]),
         ),  # type: ignore
         eccentricity=OrbitalStateVector(
             epoch_sec=jnp.array(0.0),
@@ -118,7 +118,9 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         ),  # type: ignore
         true_anomaly_deg=OrbitalStateVector(
             epoch_sec=jnp.array(0.0),
-            position=jnp.array([0.00010446, 0.00075782, -0.01157202]),
+            position=jnp.array(
+                [0.00010446313823647312, 0.0007578172888617357, -0.011572024203925656]
+            ),
             velocity=jnp.array([-8.53708417, -10.50120821, 18.98492708]),
         ),  # type: ignore
         true_longitude_of_periapsis_deg=OrbitalStateVector(
@@ -138,10 +140,7 @@ def test_orbital_state_vector_to_orbital_element_jacobian(do_jit, jac_mode):
         ),  # type: ignore
     )  # type: ignore
 
-    assert_trees_almost_equal(
-        coe_jac,
-        expected,
-    )
+    assert_trees_allclose(coe_jac, expected, rtol=1e-5)
 
 
 @pytest.mark.parametrize("do_jit", [False, True])
@@ -154,10 +153,8 @@ def test_equatorial_orbital_state_vector_to_orbital_element(do_jit):
         epoch_sec=epoch_sec, position=position, velocity=velocity
     )  # type: ignore
 
-    if do_jit:
-        coe = jax.jit(orbital_state_vector_to_orbital_element)(state)
-    else:
-        coe = orbital_state_vector_to_orbital_element(state)
+    coe = _jit(orbital_state_vector_to_orbital_element, do_jit)(state)
+
     assert coe.semimajor_axis_km == approx(0.5, rel=1e-5)
     assert coe.eccentricity == approx(1.0, rel=1e-5)
     assert coe.inclination_deg == approx(0.0, rel=1e-5)
@@ -167,3 +164,219 @@ def test_equatorial_orbital_state_vector_to_orbital_element(do_jit):
     assert coe.true_longitude_of_periapsis_deg == approx(180.0, rel=1e-5)
     assert coe.argument_of_latitude_deg == approx(0.0, rel=1e-5)
     assert coe.true_longitude_deg == approx(0.0, rel=1e-5)
+
+
+@pytest.mark.parametrize("do_jit", [False, True])
+def test_orbital_element_to_orbital_state_vector(do_jit):
+    """Test orbital element to state vector.
+
+    The test here is taken from Vallado, p. 115-116. Note that Vallado
+    rounds to 7 figures, so it's likely that our 64-bit computations
+    are more accurate.
+    """
+    epoch_sec = J2000_DATETIME.timestamp()
+    coe = ClassicalOrbitalElement(
+        epoch_sec=epoch_sec,
+        semiparameter_km=11067.790,
+        eccentricity=0.83285,
+        inclination_deg=87.87,
+        ascension_deg=227.89,
+        perigree_deg=53.38,
+        true_anomaly_deg=92.335,
+        true_longitude_of_periapsis_deg=000,
+        argument_of_latitude_deg=000,
+        true_longitude_deg=000,
+    )  # type: ignore
+
+    state = _jit(orbital_element_to_orbital_state_vector, do_jit)(coe)
+
+    assert_trees_allclose(
+        state,
+        OrbitalStateVector(
+            epoch_sec=epoch_sec,
+            position=jnp.array([6525.368, 6861.532, 6449.119]),
+            velocity=jnp.array([4.902279, 5.533140, -1.975710]),
+        ),  # type: ignore
+        rtol=1e-6,
+    )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_pqw_to_ijk(do_jit, jac_mode):
+    """Test conversion from PQW to IJK."""
+    inclination_rad = deg2rad(87.87)
+    ascension_rad = deg2rad(227.89)
+    perigree_rad = deg2rad(53.38)
+    x_pqw = jnp.array(
+        [
+            -466.7679,
+            11447.0219,
+            0.0,
+        ]
+    )
+
+    args = (
+        x_pqw,
+        inclination_rad,
+        perigree_rad,
+        ascension_rad,
+    )
+
+    x_ijk = _jit(pqw_to_ijk, do_jit)(*args)
+    if jac_mode == "fwd":
+        rotation_matrix = _jit(jax.jacfwd(pqw_to_ijk, argnums=(0,)), do_jit)(*args)
+    else:
+        rotation_matrix = _jit(jax.jacrev(pqw_to_ijk, argnums=(0,)), do_jit)(*args)
+    np.testing.assert_allclose(
+        x_ijk,
+        jnp.array([6525.368, 6861.532, 6449.119]),
+        rtol=1e-6,
+    )
+
+    np.testing.assert_allclose(
+        rotation_matrix,
+        jnp.array(
+            [
+                [
+                    [-0.37786007, 0.55464179, -0.74134625],
+                    [-0.46252560, 0.58055638, 0.67009280],
+                    [0.80205476, 0.59609293, 0.03716695],
+                ]
+            ]
+        ),
+        rtol=1e-6,
+    )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_ijk_to_pqw(do_jit, jac_mode):
+    """Test conversion from IJK to PQW."""
+    x_ijk = jnp.array([6525.36961515, 6861.53366465, 6449.11542819])
+    inclination_rad = deg2rad(87.87)
+    ascension_rad = deg2rad(227.89)
+    perigree_rad = deg2rad(53.38)
+
+    args = (
+        x_ijk,
+        inclination_rad,
+        perigree_rad,
+        ascension_rad,
+    )
+
+    x_pqw = _jit(ijk_to_pqw, do_jit)(*args)
+    if jac_mode == "fwd":
+        rotation_matrix = _jit(jax.jacfwd(ijk_to_pqw, argnums=(0,)), do_jit)(*args)
+    else:
+        rotation_matrix = _jit(jax.jacrev(ijk_to_pqw, argnums=(0,)), do_jit)(*args)
+
+    np.testing.assert_allclose(
+        x_pqw,
+        jnp.array([-466.7679, 11447.0219, 0.0]),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+    np.testing.assert_allclose(
+        rotation_matrix,
+        jnp.array(
+            [
+                [
+                    [-0.37786007, -0.46252560, 0.80205476],
+                    [0.55464179, 0.58055638, 0.59609293],
+                    [-0.74134625, 0.67009280, 0.03716695],
+                ]
+            ]
+        ),
+        rtol=1e-7,
+    )
+
+
+@pytest.mark.parametrize(
+    "do_jit,jac_mode", list(product([False, True], ["fwd", "rev"]))
+)
+def test_orbital_state_vector_to_orbital_element_round_trip_jacobian(do_jit, jac_mode):
+    """Test round-trip orbital state vectors to orbital state vectors."""
+    position = jnp.array([6524.834, 6862.875, 6448.296])
+    velocity = jnp.array([4.901327, 5.533756, -1.976341])
+    epoch_sec = J2000_DATETIME.timestamp()
+    state = OrbitalStateVector(
+        epoch_sec=epoch_sec, position=position, velocity=velocity
+    )  # type: ignore
+
+    def maybe_jit(fun):
+        if do_jit:
+            return jax.jit(fun)
+        return fun
+
+    def round_trip(state_):
+        coe = orbital_state_vector_to_orbital_element(state_)
+        return orbital_element_to_orbital_state_vector(coe)
+
+    if jac_mode == "fwd":
+        jac_fun = maybe_jit(jax.jacfwd(round_trip))
+    else:
+        jac_fun = maybe_jit(jax.jacrev(round_trip))
+
+    assert_trees_allclose(round_trip(state), state)
+
+    round_trip_jac = jac_fun(state)
+    assert_trees_allclose(
+        round_trip_jac,
+        OrbitalStateVector(
+            epoch_sec=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    1.0,
+                ),
+                position=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                velocity=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+            ),  # type: ignore
+            position=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                position=jnp.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                ),
+                velocity=jnp.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                ),
+            ),  # type: ignore
+            velocity=OrbitalStateVector(
+                epoch_sec=jnp.array(
+                    [0.0, 0.0, 0.0],
+                ),
+                position=jnp.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                ),
+                velocity=jnp.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                ),
+            ),  # type: ignore
+        ),
+        rtol=0,
+        atol=1e-11,
+    )
