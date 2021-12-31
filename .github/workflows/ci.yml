@@ -37,7 +37,7 @@ jobs:
         python -m pip install -e ".[cpu,dev]"
     - name: Test with pytest
       run: |
-        make test PYTHON_VERSION=${{ matrix.python-version }}-${{ steps.extract-branch.outputs.branch }}
+        make test PYTHON_VERSION=${{ matrix.python-version }}
     - name: Lint
       run: |
         make lint
