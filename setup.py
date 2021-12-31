@@ -58,18 +58,14 @@ REQUIRED = [
 ]
 
 DEV_REQUIRES = [
-    # Testing
-    "pytest",
-    "pytest-profiling",
-    "pytest-cov",
-    # Testing
-    "sphinx",
-    "myst-parser[linkify]",
-    # Hooks
-    "pre-commit",
-    # Linting and formatting
-    "black",
-    "pylint",
+    "black",  # Linting / formatting
+    "myst-parser[linkify]",  # Markdown docs
+    "pre-commit",  # Hooks
+    "pylint",  # Linting
+    "pytest",  # Testing
+    "pytest-profiling",  # Profiling
+    "pytest-cov",  # Coverage
+    "sphinx",  # Documentation
 ]
 
 EXTRAS = [
