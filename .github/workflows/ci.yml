@@ -14,10 +14,6 @@ jobs:
       matrix:
         python-version: ["3.7", "3.10"]
     steps:
-    - name: Extract branch name
-      shell: bash
-      run: echo "::set-output name=branch::$(echo ${GITHUB_REF#ref/heads/} | sed 's/\/\_/g')"
-      id: extract-branch
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
@@ -45,9 +41,3 @@ jobs:
     - name: Lint
       run: |
         make lint
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: pytest-results-${{ matrix.python-version }}-${{ steps.extract-branch.outputs.branch }}
-        path: reports/*
-      if: ${{ always() }}
