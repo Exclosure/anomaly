@@ -1,5 +1,6 @@
-from itertools import product
+"""Test conversion functions."""
 import math
+from itertools import product
 
 import jax
 import jax.numpy as jnp
@@ -14,7 +15,6 @@ from anomaly.kepler.conversions import (
     true_to_eccentric_anomaly,
     true_to_mean_anomaly,
 )
-
 
 REQUIRED_DECIMALS = 12
 
@@ -66,6 +66,7 @@ def test_round_trips_jit(func_pair, anomaly_and_eccentricity):
 
 @pytest.mark.parametrize("func_pair,anomaly_and_eccentricity", round_trip_test_data)
 def test_round_trips_jacfwd(func_pair, anomaly_and_eccentricity):
+    """Test round trip for conversions and their inverses with forward-mode."""
     anomaly = anomaly_and_eccentricity[:, 0]
     eccentricity = anomaly_and_eccentricity[:, 1]
     forward, backward = func_pair
@@ -83,6 +84,7 @@ def test_round_trips_jacfwd(func_pair, anomaly_and_eccentricity):
 
 @pytest.mark.parametrize("func_pair,anomaly_and_eccentricity", round_trip_test_data)
 def test_round_trips_jacrev(func_pair, anomaly_and_eccentricity):
+    """Test round trip for conversions and their inverses with reverse-mode."""
     anomaly = anomaly_and_eccentricity[:, 0]
     eccentricity = anomaly_and_eccentricity[:, 1]
     forward, backward = func_pair

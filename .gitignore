@@ -52,6 +52,7 @@ coverage.xml
 .pytest_cache/
 .benchmarks
 prof/
+reports/
 
 # Translations
 *.mo
@@ -132,3 +133,6 @@ dmypy.json
 
 # VSCode
 .vscode/
+
+
+junit/

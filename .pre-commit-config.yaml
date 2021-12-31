@@ -7,13 +7,21 @@ repos:
       - id: check-ast
       - id: check-symlinks
       - id: check-docstring-first
+        exclude: "^docs\\/|^tests\\/|setup.py"
       - id: check-merge-conflict
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        exclude: ".md$"
       - id: mixed-line-ending
       - id: check-yaml
       - id: check-ast
       - id: no-commit-to-branch
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: [--profile=black]
   - repo: https://github.com/ambv/black
     rev: 20.8b1
     hooks:
@@ -22,6 +30,7 @@ repos:
     rev: 6.1.1
     hooks:
       - id: pydocstyle
+        exclude: "^docs\\/|^tests\\/|setup.py"
   - repo: local
     hooks:
       - id: pylint
@@ -29,6 +38,7 @@ repos:
         entry: pylint
         language: system
         types: [python]
+        exclude: "^docs\\/|setup.py"
         args:
           [
             "-rn", # Only display messages

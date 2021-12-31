@@ -1,28 +1,30 @@
-from functools import partial
+# pylint: disable=invalid-name
+"""Patch the custom-root functionality of JAX."""
 import itertools
 import operator
+from functools import partial
 
 import jax
 from jax import core
 from jax import linear_util as lu
-from jax.interpreters import ad
-from jax.tree_util import tree_flatten, tree_unflatten, treedef_children, treedef_tuple
-from jax._src.traceback_util import api_boundary
 from jax._src.lax.control_flow import (
     _abstractify,
-    _map,
-    _initial_style_jaxpr,
     _check_tree,
-    _RootTuple,
     _flatten,
+    _initial_style_jaxpr,
+    _map,
+    _RootTuple,
     _split_root_args,
 )
+from jax._src.traceback_util import api_boundary
+from jax.interpreters import ad
+from jax.tree_util import tree_flatten, tree_unflatten, treedef_children, treedef_tuple
 
 
 # This is the patch
-def _stop_gradient_fun(f):
-    """This is the only patch."""
-    return f
+def _stop_gradient_fun(func):
+    """Replace the stop gradient with the identity."""
+    return func
 
 
 @api_boundary
@@ -62,6 +64,7 @@ def custom_root(f, initial_guess, solve, tangent_solve):
       The result of calling solve(f, initial_guess) with gradients defined via
       implicit differentiation assuming ``f(solve(f, initial_guess)) == 0``.
     """
+    # pylint: disable=too-many-locals,missing-type-doc
     guess_flat, in_args_tree = tree_flatten((initial_guess,))
     guess_avals = tuple(_map(_abstractify, guess_flat))
     f_jaxpr, f_consts, out_tree = _initial_style_jaxpr(f, in_args_tree, guess_avals)
@@ -75,7 +78,7 @@ def custom_root(f, initial_guess, solve, tangent_solve):
     _check_tree("solve", "initial_guess", solution_tree, in_tree)
 
     def linearize_and_solve(x, b):
-        unchecked_zeros, f_jvp = jax.linearize(f, x)
+        _, f_jvp = jax.linearize(f, x)
         return tangent_solve(f_jvp, b)
 
     l_and_s_jaxpr, l_and_s_consts, out_tree = _initial_style_jaxpr(
@@ -93,6 +96,7 @@ def custom_root(f, initial_guess, solve, tangent_solve):
 
 @partial(jax.custom_jvp, nondiff_argnums=(0, 1))
 def _custom_root(const_lengths, jaxprs, *args):
+    # pylint: disable=not-callable
     params, initial_guess = _split_root_args(args, const_lengths)
     solution = core.jaxpr_as_fun(jaxprs.solve)(*(params.solve + initial_guess))
     return solution
@@ -100,6 +104,7 @@ def _custom_root(const_lengths, jaxprs, *args):
 
 @_custom_root.defjvp
 def _root_jvp(const_lengths, jaxprs, primals, tangents):
+    # pylint: disable=not-callable,no-member
     params, _ = _split_root_args(primals, const_lengths)
     solution = _custom_root(const_lengths, jaxprs, *primals)
 

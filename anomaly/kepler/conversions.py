@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """Conversions for Keplerian orbit parameters.
 
 For conversions between anomalies, we use Newton-Raphson
@@ -47,7 +48,6 @@ from jax.lax import stop_gradient
 from anomaly.optimizers.newton import newton_1d
 from anomaly.utils import clip_to_rads
 
-
 # Newton steps here converge in very few iterations
 _MAX_NEWTON_ITERATIONS = 12
 
@@ -63,8 +63,6 @@ def mean_to_eccentric_anomaly(
     Parameters:
       mean_anomaly: The mean anomaly (radians).
       eccentricity: Eccentricity (between zero and one).
-      **kwargs: Additional kewyord arguments passed to
-        the Newton-Raphson optimizer.
 
     Returns:
       The eccentric anomaly.

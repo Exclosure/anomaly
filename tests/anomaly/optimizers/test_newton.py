@@ -1,18 +1,16 @@
-from functools import partial
-from unittest.mock import patch
-
+"""Test Newton optimizers."""
+# pylint: disable=invalid-name,missing-function-docstring
 import jax
-from jax import numpy as jnp
 import jax.core
 import numpy as np
-from scipy.linalg.special_matrices import toeplitz
+from jax import numpy as jnp
+from scipy.linalg.special_matrices import toeplitz  # pylint: disable=no-name-in-module
 
-from anomaly.optimizers.newton import newton_raphson, newton_1d, linear_solve
-from jax import config
+from anomaly.optimizers.newton import linear_solve, newton_1d, newton_raphson
 
 
 def one_dim_test(x: jnp.ndarray) -> jnp.ndarray:
-    # Has roots at 1, 2, -2
+    """Compute a function that has roots at 1, 2, -2."""
     return jnp.power(2 * x - 2, 3) * jnp.power(jnp.power(x, 2) - 4, 2)
 
 
@@ -36,6 +34,7 @@ complex_method = lambda x: transform @ one_dim_test(transform_inv @ x)
 
 
 def test_newton_1d():
+    """Test 1d newton method."""
     # Note: The optimization to has trouble
     # with the flatness near the root at 1,
     # resulting in lower-quality solutions.

@@ -42,7 +42,7 @@ import os
 import sys
 from shutil import rmtree
 
-from setuptools import find_packages, setup, Command
+from setuptools import Command, find_packages, setup
 
 # Package meta-data.
 NAME = "anomaly"
@@ -58,20 +58,17 @@ REQUIRED = [
 ]
 
 DEV_REQUIRES = [
-    # Testing
-    "pytest",
-    "pytest-profiling",
-    # Testing
-    "sphinx",
-    "myst-parser[linkify]",
-    # Hooks
-    "pre-commit",
-    # Linting and formatting
-    "black",
-    "pylint",
+    "black",  # Linting / formatting
+    "myst-parser[linkify]",  # Markdown docs
+    "pre-commit",  # Hooks
+    "pylint",  # Linting
+    "pytest",  # Testing
+    "pytest-profiling",  # Profiling
+    "pytest-cov",  # Coverage
+    "sphinx",  # Documentation
 ]
 
-EXTRAS = [
+EXTRA_PACKAGES = [
     "jupyterlab",
 ]
 
@@ -81,7 +78,7 @@ EXTRAS = {
     "gpu": ["jax[gpu]"],
     "tpu": ["jax[tpu]"],
     "dev": DEV_REQUIRES,
-    "extras": EXTRAS,
+    "extras": EXTRA_PACKAGES,
 }
 
 
