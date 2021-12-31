@@ -68,7 +68,7 @@ DEV_REQUIRES = [
     "sphinx",  # Documentation
 ]
 
-EXTRAS = [
+EXTRA_PACKAGES = [
     "jupyterlab",
 ]
 
@@ -78,7 +78,7 @@ EXTRAS = {
     "gpu": ["jax[gpu]"],
     "tpu": ["jax[tpu]"],
     "dev": DEV_REQUIRES,
-    "extras": EXTRAS,
+    "extras": EXTRA_PACKAGES,
 }
 
 
