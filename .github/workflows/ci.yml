@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Extract branch name
       shell: bash
-      run: echo "::set-output name=branch::$(echo ${GITHUB_REF} | sed 's/\/\_/g')"
+      run: echo "::set-output name=branch::$(echo ${GITHUB_REF#ref/heads/} | sed 's/\/\_/g')"
       id: extract-branch
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
