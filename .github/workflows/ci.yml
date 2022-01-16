@@ -1,4 +1,4 @@
-name: CI linting and testing
+name: Build
 
 on:
   push:

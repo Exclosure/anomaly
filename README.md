@@ -1,4 +1,6 @@
 # Anomaly
+[![CI Status](https://github.com/mbmccoy/anomaly/actions/workflows/ci.yml/badge.svg)](https://github.com/mbmccoy/anomaly/actions/workflows/ci.yml)
+
 
 Differentiable orbital dynamics accelerated with JAX.
 
