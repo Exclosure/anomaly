@@ -90,7 +90,8 @@ disable=raw-checker-failed,
         useless-suppression,
         deprecated-pragma,
         use-symbolic-message-instead,
-        unnecessary-lambda
+        unnecessary-lambda,
+        missing-function-docstring
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -222,6 +223,10 @@ good-names=a,
            Ω,
            ω,
            ν,
+           r0,
+           r1,
+           v0,
+           v1,
            x0,
            mu,
            nu,

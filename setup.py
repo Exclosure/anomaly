@@ -49,7 +49,7 @@ NAME = "anomaly"
 DESCRIPTION = "Differentiable orbital dynamics accelerated with JAX."
 URL = "https://github.com/mbmccoy/anomaly"
 AUTHOR = "Mike McCoy"
-EMAIL = None
+EMAIL = "mike@exclosure.io"
 REQUIRES_PYTHON = ">=3.7.0"
 VERSION = None  # Use the __version__.py file; see below.
 
@@ -59,6 +59,7 @@ REQUIRED = [
 
 DEV_REQUIRES = [
     "black",  # Linting / formatting
+    "ipykernel",  # Jupyter kernel
     "myst-parser[linkify]",  # Markdown docs
     "pre-commit",  # Hooks
     "pylint",  # Linting
@@ -69,7 +70,7 @@ DEV_REQUIRES = [
 ]
 
 EXTRA_PACKAGES = [
-    "jupyterlab",
+    "sgp4",
 ]
 
 # Optional packages
